@@ -1,0 +1,12 @@
+[package]
+name = "flowfield"
+version = "0.1.0"
+authors = ["romptroll <romptroll@hotmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+engine = {git = "https://github.com/romptroll/RustGameEngine"}
+noise = "0.6.0"
+rand = "0.7.3"
