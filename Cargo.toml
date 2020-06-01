@@ -10,3 +10,4 @@ edition = "2018"
 engine = {git = "https://github.com/romptroll/RustGameEngine"}
 noise = "0.6.0"
 rand = "0.7.3"
+clap = "*"
