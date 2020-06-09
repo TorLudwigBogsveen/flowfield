@@ -102,6 +102,7 @@ struct FlowField {
     increment: Vec3f,
     multiplier: f32,
     speed: f32,
+    fixed_time_step: Option<f32>,
 
     n_new_particles: usize,
 
@@ -121,7 +122,8 @@ impl FlowField {
         multiplier: f32,
         increment: Vec3f,
         speed: f32,
-        n_new_particles: usize
+        n_new_particles: usize,
+        fixed_time_step: Option<f32>,
     ) -> FlowField {
         let mut win = win;
 
@@ -151,12 +153,22 @@ impl FlowField {
             index: 0,
             flow_field,
             z_off: 0.0,
+            fixed_time_step,
         }
     }
 }
 
 impl core::Game for FlowField {
     fn update(&mut self, dt: f32, _fps: u32) -> bool {
+        let ts;
+        match self.fixed_time_step {
+            Some(time_step) => {
+                ts = time_step;
+            }
+            None => {
+                ts = dt;
+            }
+        }        
 
         for y in 0..self.noise_height {
             for x in 0..self.noise_width {
@@ -173,8 +185,8 @@ impl core::Game for FlowField {
 			let x = (((particle.bounds.x + 1.0) / 2.0) * self.noise_width as f32) as usize;
 			let y = (((particle.bounds.y + 1.0) / 2.0) * self.noise_height as f32) as usize;
 			let flow = self.flow_field[x+y*self.noise_width];
-			particle.vel.x += (flow.cos() * dt) / 10.0;
-            particle.vel.y += (flow.sin() * dt) / 10.0;
+			particle.vel.x += (flow.cos() * ts) / 10.0;
+            particle.vel.y += (flow.sin() * ts) / 10.0;
 
             particle.vel.set_mag(1.0 / self.win.get_height() as f32 * self.speed);
 
@@ -182,7 +194,7 @@ impl core::Game for FlowField {
             particle.bounds.y += particle.vel.y;
 		}
 
-		self.z_off += dt as f64 * self.increment.z as f64;
+		self.z_off += ts as f64 * self.increment.z as f64;
 
         //////////////////////RENDER/////////////////////
         for _ in 0..self.n_new_particles {
@@ -226,6 +238,7 @@ fn main() {
     let mut multiplier: f32 = 3.14 * 20.0;
     let mut speed: f32 = 4.0;
     let mut n_new_particles: u32 = 0;
+    let mut fixed_time_step: Option::<f32> = Some(0.03);
 
     let flags = App::new("flowfield")
         .version("0.1.0")
@@ -327,6 +340,14 @@ fn main() {
                 .takes_value(true)
                 .help("The speed in pixels which the particles travels each tick!")
         )
+        .arg(
+            Arg::with_name("fixed time step")
+                .short("t")
+                .long("timeStep")
+                .value_name("fixed time step")
+                .takes_value(true)
+                .help("Enables you to pick a custom timestep. Ignore this if you don't want fixed time step!")
+        )
         .get_matches();
 
     if flags.is_present("screen width") {
@@ -368,7 +389,9 @@ fn main() {
     if flags.is_present("speed") {
         speed = flags.value_of("speed").unwrap().parse::<f32>().unwrap();
     }
-
+    if flags.is_present("fixed time step") {
+        fixed_time_step = Some(flags.value_of("fixed time step").unwrap().parse::<f32>().unwrap());
+    }
 
 
     let mut win = Window::new(screen_w, screen_h, "").unwrap();
@@ -379,5 +402,15 @@ fn main() {
     unsafe { enable(Capability::Blending); }
     unsafe { blend_func(BlendMode::One, BlendMode::One); }
 
-    core::init_game(FlowField::new(win, noise_w as usize, noise_h as usize, particles as usize, multiplier, increment, speed, n_new_particles as usize));
+    core::init_game(FlowField::new(
+        win,
+        noise_w as usize,
+        noise_h as usize, 
+        particles as usize, 
+        multiplier, 
+        increment, 
+        speed,
+        n_new_particles as usize,
+        fixed_time_step,
+    ));
 }
